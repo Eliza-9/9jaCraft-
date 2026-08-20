@@ -1,60 +1,32 @@
-
 # SkillLink Nigeria
 
-> Connecting Skilled Hands to Those Who Need Them
-
-SkillLink Nigeria is a modern full-stack web application that connects customers with verified artisans across Nigeria. Customers can search for skilled professionals by profession and location, view artisan profiles, book services, and leave reviews. Artisans can create professional profiles, manage their availability, and receive bookings.
+Full-stack artisan finder and booking MVP for customers across Nigeria.
 
 ## Features
+- Artisan profiles
+- Search by artisan name or service
+- State and LGA filtering
+- Artisan location and availability
+- Ratings and experience
+- Booking requests saved to SQLite
+- WhatsApp contact
+- Mobile-responsive interface
 
-### For Customers
-- Search artisans by name or profession
-- Filter by state, local government area (LGA), and town/city
-- View detailed artisan profiles with ratings and reviews
-- Book artisans with preferred date, time, and service details
-- Contact artisans via phone call or WhatsApp
-- Leave ratings and reviews after completed jobs
+## Technology
+HTML, CSS, JavaScript, Node.js, Express and SQLite (better-sqlite3).
 
-### For Artisans
-- Create and edit a professional profile
-- Upload a profile picture
-- Set availability status (Available, Busy, Offline)
-- Receive and manage booking requests
-- Accept or reject bookings
-- Mark jobs as completed
-
-## Tech Stack
-
-- **Frontend:** React + TypeScript + Vite
-- **Styling:** Tailwind CSS
-- **Icons:** Lucide React
-- **Backend & Database:** Bolt Database (PostgreSQL with Row-Level Security)
-- **Authentication:** Bolt Database Auth (email/password)
-
-## Supported Professions
-
-Electricians, Plumbers, Carpenters, Tailors, Painters, Mechanics, Hairdressers, Welders, AC Technicians, and Masons.
-
-## Location Coverage
-
-All 36 Nigerian states plus the Federal Capital Territory (FCT), with local government areas for major states including Lagos, FCT, Rivers, Kano, Oyo, Enugu, Kaduna, Abia, Ogun, and Delta.
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/skilllink-nigeria.git
-cd skilllink-nigeria
-
-# Install dependencies
+## Run
 npm install
+npm start
 
-# Start the development server
-npm run dev
+The server serves the frontend and API. SQLite is created automatically in `data/skilllink.db`.
+
+## API
+GET /api/artisans
+GET /api/artisans/:id
+POST /api/bookings
+
+## Architecture
+Browser frontend -> Node.js/Express API -> SQLite database.
+
+SQLite keeps the MVP self-contained and deployment-friendly. A production version can migrate to PostgreSQL.
