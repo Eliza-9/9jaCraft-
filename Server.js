@@ -61,7 +61,6 @@ async function initDB() {
     )
   `);
 
-  // New columns your checklist needs — safe to run every startup
   await pool.query(`ALTER TABLE artisans ADD COLUMN IF NOT EXISTS city TEXT`);
   await pool.query(`ALTER TABLE artisans ADD COLUMN IF NOT EXISTS area TEXT`);
   await pool.query(`ALTER TABLE artisans ADD COLUMN IF NOT EXISTS price_range TEXT`);
@@ -200,6 +199,20 @@ app.get("/api/artisans/:id", verifyToken, async (req, res) => {
   }
 });
 
+// Get current artisan's own profile (if it exists)
+app.get("/api/me/artisan-profile", verifyToken, async (req, res) => {
+  if (req.user.role !== "artisan") {
+    return res.status(403).json({ error: "Only artisans have this" });
+  }
+  try {
+    const result = await pool.query("SELECT * FROM artisans WHERE user_id = $1", [req.user.id]);
+    res.json(result.rows[0] || null);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+});
+
+// Create or update artisan profile
 app.post("/api/artisans", verifyToken, async (req, res) => {
   if (req.user.role !== "artisan") {
     return res.status(403).json({ error: "Only artisans can create profiles" });
@@ -209,6 +222,17 @@ app.post("/api/artisans", verifyToken, async (req, res) => {
     return res.status(400).json({ error: "All fields required" });
   }
   try {
+    const existing = await pool.query("SELECT id FROM artisans WHERE user_id = $1", [req.user.id]);
+
+    if (existing.rows.length > 0) {
+      await pool.query(
+        `UPDATE artisans SET profession=$1, state=$2, lga=$3, location=$4, city=$5, area=$6, price_range=$7, experience=$8, bio=$9
+         WHERE user_id = $10`,
+        [profession, state, lga, location, city || "", area || "", price_range || "", experience || 0, bio || "", req.user.id]
+      );
+      return res.json({ message: "Artisan profile updated" });
+    }
+
     await pool.query(
       `INSERT INTO artisans (user_id, profession, state, lga, location, city, area, price_range, experience, bio, available)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)`,
@@ -216,7 +240,7 @@ app.post("/api/artisans", verifyToken, async (req, res) => {
     );
     res.status(201).json({ message: "Artisan profile created" });
   } catch (error) {
-    res.status(500).json({ error: "Failed to create profile" });
+    res.status(500).json({ error: "Failed to save profile" });
   }
 });
 
