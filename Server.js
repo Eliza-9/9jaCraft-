@@ -1,5 +1,5 @@
 const express = require("express");
-const initSqlJs = require("sql.js");
+const { Pool } = require("pg");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const cors = require("cors");
@@ -9,18 +9,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "skilllink-secret-key-2026";
 
-let db = null;
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// JWT verification middleware
 const verifyToken = (req, res, next) => {
   const token = req.headers["authorization"]?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "No token provided" });
-  
   try {
     req.user = jwt.verify(token, JWT_SECRET);
     next();
@@ -29,15 +29,10 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// Initialize database
 async function initDB() {
-  const SQL = await initSqlJs();
-  db = new SQL.Database();
-
-  // Create users table
-  db.run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       phone TEXT,
@@ -45,16 +40,15 @@ async function initDB() {
       role TEXT NOT NULL,
       avatar TEXT,
       bio TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  // Create artisans table
-  db.run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS artisans (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
       profession TEXT NOT NULL,
       state TEXT NOT NULL,
       lga TEXT NOT NULL,
@@ -63,78 +57,59 @@ async function initDB() {
       rating REAL DEFAULT 5,
       bio TEXT,
       available INTEGER DEFAULT 1,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(user_id) REFERENCES users(id)
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  // Create bookings table
-  db.run(`
+  // New columns your checklist needs — safe to run every startup
+  await pool.query(`ALTER TABLE artisans ADD COLUMN IF NOT EXISTS city TEXT`);
+  await pool.query(`ALTER TABLE artisans ADD COLUMN IF NOT EXISTS area TEXT`);
+  await pool.query(`ALTER TABLE artisans ADD COLUMN IF NOT EXISTS price_range TEXT`);
+  await pool.query(`ALTER TABLE artisans ADD COLUMN IF NOT EXISTS verified INTEGER DEFAULT 0`);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS bookings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      artisan_id INTEGER NOT NULL,
-      customer_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      artisan_id INTEGER NOT NULL REFERENCES artisans(id),
+      customer_id INTEGER NOT NULL REFERENCES users(id),
       service TEXT NOT NULL,
-      booking_date TEXT NOT NULL,
-      booking_time TEXT NOT NULL,
+      booking_date TEXT,
+      booking_time TEXT,
       location TEXT NOT NULL,
       notes TEXT,
       status TEXT DEFAULT 'Pending',
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(artisan_id) REFERENCES artisans(id),
-      FOREIGN KEY(customer_id) REFERENCES users(id)
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await pool.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS message TEXT`);
+
+  console.log("Database tables ready");
 }
 
 // AUTH ROUTES
 app.post("/api/auth/signup", async (req, res) => {
   const { name, email, phone, password, role } = req.body;
-
   if (!name || !email || !password || !role) {
     return res.status(400).json({ error: "All fields required" });
   }
-
   if (!["artisan", "customer"].includes(role)) {
     return res.status(400).json({ error: "Invalid role" });
   }
-
   try {
-    // Check if user exists
-    const checkStmt = db.prepare("SELECT id FROM users WHERE email = ?");
-    checkStmt.bind([email]);
-    if (checkStmt.step()) {
-      checkStmt.free();
+    const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
+    if (existing.rows.length > 0) {
       return res.status(400).json({ error: "Email already registered" });
     }
-    checkStmt.free();
-
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insert user
-    const insertStmt = db.prepare(`
-      INSERT INTO users (name, email, phone, password, role)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    insertStmt.bind([name, email, phone || "", hashedPassword, role]);
-    insertStmt.step();
-    insertStmt.free();
-
-    // Get user ID
-    const idStmt = db.prepare("SELECT last_insert_rowid() as id");
-    idStmt.step();
-    const { id } = idStmt.getAsObject();
-    idStmt.free();
-
-    // Create JWT token
+    const result = await pool.query(
+      `INSERT INTO users (name, email, phone, password, role)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [name, email, phone || "", hashedPassword, role]
+    );
+    const id = result.rows[0].id;
     const token = jwt.sign({ id, email, role }, JWT_SECRET, { expiresIn: "7d" });
-
-    res.status(201).json({
-      message: "Signup successful",
-      token,
-      user: { id, name, email, role }
-    });
+    res.status(201).json({ message: "Signup successful", token, user: { id, name, email, role } });
   } catch (error) {
     res.status(500).json({ error: "Signup failed" });
   }
@@ -142,122 +117,103 @@ app.post("/api/auth/signup", async (req, res) => {
 
 app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
-
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password required" });
   }
-
   try {
-    const stmt = db.prepare("SELECT id, name, email, password, role FROM users WHERE email = ?");
-    stmt.bind([email]);
-    
-    if (!stmt.step()) {
-      stmt.free();
+    const result = await pool.query(
+      "SELECT id, name, email, password, role FROM users WHERE email = $1",
+      [email]
+    );
+    if (result.rows.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
-
-    const user = stmt.getAsObject();
-    stmt.free();
-
-    // Verify password
+    const user = result.rows[0];
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
-
-    // Create JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
-
-    res.json({
-      message: "Login successful",
-      token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role }
-    });
+    res.json({ message: "Login successful", token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
     res.status(500).json({ error: "Login failed" });
   }
 });
 
 // ARTISAN ROUTES (Protected)
-app.get("/api/artisans", verifyToken, (req, res) => {
+app.get("/api/artisans", verifyToken, async (req, res) => {
   const q = req.query.q || "";
   const state = req.query.state || "";
   const lga = req.query.lga || "";
+  const sort = req.query.sort || "rating"; // rating | experience | newest
 
-  const query = `
-    SELECT a.*, u.name, u.phone, u.bio FROM artisans a
-    JOIN users u ON a.user_id = u.id
-    WHERE (u.name LIKE ? OR a.profession LIKE ?)
-    AND a.state LIKE ?
-    AND a.lga LIKE ?
-    AND a.available = 1
-    ORDER BY a.rating DESC
-  `;
+  const sortMap = {
+    rating: "a.rating DESC",
+    experience: "a.experience DESC",
+    newest: "a.created_at DESC"
+  };
+  const orderBy = sortMap[sort] || sortMap.rating;
 
-  const stmt = db.prepare(query);
-  stmt.bind([`%${q}%`, `%${q}%`, `%${state}%`, `%${lga}%`]);
-
-  const artisans = [];
-  while (stmt.step()) {
-    artisans.push(stmt.getAsObject());
+  try {
+    const result = await pool.query(
+      `SELECT a.*, u.name, u.bio,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM bookings b WHERE b.artisan_id = a.id AND b.customer_id = $4
+        ) OR a.user_id = $4 THEN u.phone ELSE NULL END AS phone
+       FROM artisans a
+       JOIN users u ON a.user_id = u.id
+       WHERE (u.name ILIKE $1 OR a.profession ILIKE $1)
+       AND a.state ILIKE $2
+       AND a.lga ILIKE $3
+       AND a.available = 1
+       ORDER BY ${orderBy}`,
+      [`%${q}%`, `%${state}%`, `%${lga}%`, req.user.id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: "Search failed" });
   }
-  stmt.free();
-
-  res.json(artisans);
 });
 
-app.get("/api/artisans/:id", verifyToken, (req, res) => {
-  const query = `
-    SELECT a.*, u.name, u.phone, u.bio FROM artisans a
-    JOIN users u ON a.user_id = u.id
-    WHERE a.id = ?
-  `;
-  const stmt = db.prepare(query);
-  stmt.bind([parseInt(req.params.id)]);
-
-  if (stmt.step()) {
-    const artisan = stmt.getAsObject();
-    stmt.free();
-    return res.json(artisan);
+app.get("/api/artisans/:id", verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT a.*, u.name, u.bio,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM bookings b WHERE b.artisan_id = a.id AND b.customer_id = $2
+        ) OR a.user_id = $2 THEN u.phone ELSE NULL END AS phone
+       FROM artisans a
+       JOIN users u ON a.user_id = u.id
+       WHERE a.id = $1`,
+      [parseInt(req.params.id), req.user.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Artisan not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch artisan" });
   }
-
-  stmt.free();
-  res.status(404).json({ error: "Artisan not found" });
 });
 
-// Create artisan profile (after signup)
-app.post("/api/artisans", verifyToken, (req, res) => {
+app.post("/api/artisans", verifyToken, async (req, res) => {
   if (req.user.role !== "artisan") {
     return res.status(403).json({ error: "Only artisans can create profiles" });
   }
-
-  const { profession, state, lga, location, experience, bio } = req.body;
-
+  const { profession, state, lga, location, city, area, price_range, experience, bio } = req.body;
   if (!profession || !state || !lga || !location) {
     return res.status(400).json({ error: "All fields required" });
   }
-
   try {
-    const insertStmt = db.prepare(`
-      INSERT INTO artisans (user_id, profession, state, lga, location, experience, bio, available)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-    `);
-    insertStmt.bind([
-      req.user.id,
-      profession,
-      state,
-      lga,
-      location,
-      experience || 0,
-      bio || ""
-    ]);
-    insertStmt.step();
-    insertStmt.free();
-
+    await pool.query(
+      `INSERT INTO artisans (user_id, profession, state, lga, location, city, area, price_range, experience, bio, available)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)`,
+      [req.user.id, profession, state, lga, location, city || "", area || "", price_range || "", experience || 0, bio || ""]
+    );
     res.status(201).json({ message: "Artisan profile created" });
   } catch (error) {
     res.status(500).json({ error: "Failed to create profile" });
@@ -265,106 +221,92 @@ app.post("/api/artisans", verifyToken, (req, res) => {
 });
 
 // BOOKING ROUTES (Protected)
-app.post("/api/bookings", verifyToken, (req, res) => {
+app.post("/api/bookings", verifyToken, async (req, res) => {
   if (req.user.role !== "customer") {
     return res.status(403).json({ error: "Only customers can book" });
   }
-
-  const {
-    artisan_id,
-    service,
-    booking_date,
-    booking_time,
-    location,
-    notes = ""
-  } = req.body;
-
-  if (!artisan_id || !service || !booking_date || !booking_time || !location) {
-    return res.status(400).json({ error: "All fields required" });
+  const { artisan_id, service, message, booking_date, booking_time, location, notes = "" } = req.body;
+  if (!artisan_id || !message || !location) {
+    return res.status(400).json({ error: "artisan_id, message, and location are required" });
   }
-
   try {
-    // Verify artisan exists
-    const checkStmt = db.prepare("SELECT id FROM artisans WHERE id = ?");
-    checkStmt.bind([artisan_id]);
-    if (!checkStmt.step()) {
-      checkStmt.free();
+    const artisan = await pool.query("SELECT id, profession FROM artisans WHERE id = $1", [artisan_id]);
+    if (artisan.rows.length === 0) {
       return res.status(404).json({ error: "Artisan not found" });
     }
-    checkStmt.free();
-
-    // Insert booking
-    const insertStmt = db.prepare(`
-      INSERT INTO bookings
-      (artisan_id, customer_id, service, booking_date, booking_time, location, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    insertStmt.bind([
-      artisan_id,
-      req.user.id,
-      service,
-      booking_date,
-      booking_time,
-      location,
-      notes
-    ]);
-    insertStmt.step();
-    insertStmt.free();
-
-    // Get booking ID
-    const idStmt = db.prepare("SELECT last_insert_rowid() as id");
-    idStmt.step();
-    const { id } = idStmt.getAsObject();
-    idStmt.free();
-
-    res.status(201).json({
-      message: "Booking submitted",
-      bookingId: id,
-      status: "Pending"
-    });
+    const result = await pool.query(
+      `INSERT INTO bookings
+       (artisan_id, customer_id, service, booking_date, booking_time, location, notes, message)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [artisan_id, req.user.id, service || artisan.rows[0].profession, booking_date || null, booking_time || null, location, notes, message]
+    );
+    res.status(201).json({ message: "Booking submitted", bookingId: result.rows[0].id, status: "Pending" });
   } catch (error) {
     res.status(500).json({ error: "Booking failed" });
   }
 });
 
-app.get("/api/bookings", verifyToken, (req, res) => {
-  const query = req.user.role === "customer"
-    ? `SELECT b.*, a.profession, u.name FROM bookings b
-       JOIN artisans a ON b.artisan_id = a.id
-       JOIN users u ON a.user_id = u.id
-       WHERE b.customer_id = ?
-       ORDER BY b.created_at DESC`
-    : `SELECT b.*, u.name as customer_name, u.phone FROM bookings b
-       JOIN artisans a ON b.artisan_id = a.id
-       JOIN users u ON b.customer_id = u.id
-       WHERE a.user_id = ?
-       ORDER BY b.created_at DESC`;
-
-  const stmt = db.prepare(query);
-  stmt.bind([req.user.id]);
-
-  const bookings = [];
-  while (stmt.step()) {
-    bookings.push(stmt.getAsObject());
+// Artisan accepts/declines/completes a booking
+app.patch("/api/bookings/:id/status", verifyToken, async (req, res) => {
+  if (req.user.role !== "artisan") {
+    return res.status(403).json({ error: "Only artisans can update booking status" });
   }
-  stmt.free();
+  const { status } = req.body;
+  const allowed = ["Accepted", "Declined", "Completed"];
+  if (!allowed.includes(status)) {
+    return res.status(400).json({ error: "Status must be Accepted, Declined, or Completed" });
+  }
+  try {
+    const booking = await pool.query(
+      `SELECT b.id FROM bookings b
+       JOIN artisans a ON b.artisan_id = a.id
+       WHERE b.id = $1 AND a.user_id = $2`,
+      [req.params.id, req.user.id]
+    );
+    if (booking.rows.length === 0) {
+      return res.status(404).json({ error: "Booking not found or not yours" });
+    }
+    await pool.query("UPDATE bookings SET status = $1 WHERE id = $2", [status, req.params.id]);
+    res.json({ message: `Booking marked ${status}` });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update booking" });
+  }
+});
 
-  res.json(bookings);
+app.get("/api/bookings", verifyToken, async (req, res) => {
+  try {
+    const query = req.user.role === "customer"
+      ? `SELECT b.*, a.profession, u.name FROM bookings b
+         JOIN artisans a ON b.artisan_id = a.id
+         JOIN users u ON a.user_id = u.id
+         WHERE b.customer_id = $1
+         ORDER BY b.created_at DESC`
+      : `SELECT b.*, u.name as customer_name, u.phone FROM bookings b
+         JOIN artisans a ON b.artisan_id = a.id
+         JOIN users u ON b.customer_id = u.id
+         WHERE a.user_id = $1
+         ORDER BY b.created_at DESC`;
+    const result = await pool.query(query, [req.user.id]);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch bookings" });
+  }
 });
 
 // USER PROFILE
-app.get("/api/me", verifyToken, (req, res) => {
-  const stmt = db.prepare("SELECT id, name, email, phone, role FROM users WHERE id = ?");
-  stmt.bind([req.user.id]);
-  
-  if (stmt.step()) {
-    const user = stmt.getAsObject();
-    stmt.free();
-    return res.json(user);
+app.get("/api/me", verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, name, email, phone, role FROM users WHERE id = $1",
+      [req.user.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch user" });
   }
-  
-  stmt.free();
-  res.status(404).json({ error: "User not found" });
 });
 
 app.listen(PORT, async () => {
