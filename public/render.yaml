@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: skilllink-nigeria
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
