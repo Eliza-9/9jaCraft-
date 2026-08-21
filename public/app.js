@@ -30,7 +30,6 @@ function toggleOtherProfession() {
   group.style.display = select.value === "Other" ? "block" : "none";
 }
 
-// Load existing artisan profile (if any) to prefill the form
 async function loadMyProfile() {
   try {
     const response = await fetch("/api/me/artisan-profile", {
@@ -158,7 +157,7 @@ function renderArtisans(artisans) {
         <p class="artisan-bio">${a.bio}</p>
         <div class="artisan-actions">
           <button class="btn btn-primary" onclick="openBookingModal(${a.id}, '${a.name}')">Book</button>
-          ${a.phone ? `<a href="https://wa.me/234${a.phone.replace(/^0/, '')}" target="_blank" class="btn btn-outline">WhatsApp</a>` : `<span class="btn btn-outline" style="opacity:0.5; cursor:default;" title="Available after booking">WhatsApp (after booking)</span>`}
+          ${a.phone ? `<a href="https://wa.me/234${a.phone.replace(/^0/, '')}" target="_blank" class="btn btn-outline">WhatsApp</a>` : `<span style="display:inline-block; padding:8px 16px; background:#f0f0f0; color:#666; border-radius:6px; font-size:14px;" title="Contact available after booking">🔒 WhatsApp after booking</span>`}
         </div>
       </div>
     </div>
