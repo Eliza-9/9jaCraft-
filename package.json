@@ -1,0 +1,16 @@
+{
+  "name": "skilllink-nigeria",
+  "version": "1.0.0",
+  "description": "SkillLink Nigeria",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "build": "echo Build complete"
+  },
+  "keywords": ["skills", "marketplace", "nigeria"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {}
+}
