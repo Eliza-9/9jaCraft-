@@ -1,8 +1,12 @@
 let selectedArtisan = null;
 
-// Navigation
 function showDashboard() {
   switchPage("dashboardPage");
+}
+
+function showProfile() {
+  switchPage("profilePage");
+  loadMyProfile();
 }
 
 function showArtisans() {
@@ -20,7 +24,92 @@ function switchPage(pageId) {
   document.getElementById(pageId).classList.add("active");
 }
 
-// Search Artisans
+function toggleOtherProfession() {
+  const select = document.getElementById("profileProfession");
+  const group = document.getElementById("otherProfessionGroup");
+  group.style.display = select.value === "Other" ? "block" : "none";
+}
+
+// Load existing artisan profile (if any) to prefill the form
+async function loadMyProfile() {
+  try {
+    const response = await fetch("/api/me/artisan-profile", {
+      headers: { "Authorization": `Bearer ${authToken}` }
+    });
+    const profile = await response.json();
+    if (!profile) return;
+
+    const knownTrades = ["Plumber","Electrician","Carpenter","Painter","Mechanic","Tailor","Hairdresser/Barber","Mason/Bricklayer","Welder","AC Repair Technician","Generator Repair Technician","Cleaner","Photographer","Caterer"];
+
+    if (knownTrades.includes(profile.profession)) {
+      document.getElementById("profileProfession").value = profile.profession;
+    } else {
+      document.getElementById("profileProfession").value = "Other";
+      document.getElementById("profileProfessionOther").value = profile.profession;
+      toggleOtherProfession();
+    }
+
+    document.getElementById("profileState").value = profile.state || "";
+    document.getElementById("profileLga").value = profile.lga || "";
+    document.getElementById("profileLocation").value = profile.location || "";
+    document.getElementById("profileCity").value = profile.city || "";
+    document.getElementById("profileArea").value = profile.area || "";
+    document.getElementById("profilePriceRange").value = profile.price_range || "";
+    document.getElementById("profileExperience").value = profile.experience || "";
+    document.getElementById("profileBio").value = profile.bio || "";
+  } catch (error) {
+    console.error("Failed to load profile", error);
+  }
+}
+
+document.getElementById("artisanProfileForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const professionSelect = document.getElementById("profileProfession").value;
+  const profession = professionSelect === "Other"
+    ? document.getElementById("profileProfessionOther").value
+    : professionSelect;
+
+  const payload = {
+    profession,
+    state: document.getElementById("profileState").value,
+    lga: document.getElementById("profileLga").value,
+    location: document.getElementById("profileLocation").value,
+    city: document.getElementById("profileCity").value,
+    area: document.getElementById("profileArea").value,
+    price_range: document.getElementById("profilePriceRange").value,
+    experience: parseInt(document.getElementById("profileExperience").value) || 0,
+    bio: document.getElementById("profileBio").value
+  };
+
+  if (!profession) {
+    alert("Please select or enter your trade");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/artisans", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${authToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.error || "Failed to save listing");
+      return;
+    }
+
+    alert("✅ " + data.message);
+  } catch (error) {
+    alert("Failed to save listing: " + error.message);
+  }
+});
+
 async function searchArtisans() {
   const q = document.getElementById("searchQuery").value;
   const state = document.getElementById("stateFilter").value;
@@ -33,7 +122,6 @@ async function searchArtisans() {
     const response = await fetch(`/api/artisans?${params}`, {
       headers: { "Authorization": `Bearer ${authToken}` }
     });
-
     const artisans = await response.json();
     renderArtisans(artisans);
   } catch (error) {
@@ -77,7 +165,6 @@ function renderArtisans(artisans) {
   `).join("");
 }
 
-// Booking Modal
 function openBookingModal(artisanId, artisanName) {
   selectedArtisan = { id: artisanId, name: artisanName };
   document.getElementById("bookingModal").classList.add("active");
@@ -91,22 +178,15 @@ function closeModal() {
 document.getElementById("bookingForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const messageEl = document.getElementById("bookingMessage");
-
   const booking = {
     artisan_id: selectedArtisan.id,
     service: document.getElementById("bookingService").value,
-    message: messageEl ? messageEl.value : document.getElementById("bookingNotes").value,
+    message: document.getElementById("bookingMessage").value,
     booking_date: document.getElementById("bookingDate").value,
     booking_time: document.getElementById("bookingTime").value,
     location: document.getElementById("bookingLocation").value,
     notes: document.getElementById("bookingNotes").value
   };
-
-  if (!booking.message) {
-    alert("Please add a short message for the artisan");
-    return;
-  }
 
   try {
     const response = await fetch("/api/bookings", {
@@ -133,13 +213,11 @@ document.getElementById("bookingForm").addEventListener("submit", async (e) => {
   }
 });
 
-// Load Bookings
 async function loadBookings() {
   try {
     const response = await fetch("/api/bookings", {
       headers: { "Authorization": `Bearer ${authToken}` }
     });
-
     const bookings = await response.json();
     renderBookings(bookings);
   } catch (error) {
@@ -190,21 +268,17 @@ async function updateBookingStatus(bookingId, status) {
       },
       body: JSON.stringify({ status })
     });
-
     const data = await response.json();
-
     if (!response.ok) {
       alert(data.error || "Update failed");
       return;
     }
-
     loadBookings();
   } catch (error) {
     alert("Update failed: " + error.message);
   }
 }
 
-// Close modal when clicking outside
 window.onclick = (event) => {
   const modal = document.getElementById("bookingModal");
   if (event.target === modal) {
