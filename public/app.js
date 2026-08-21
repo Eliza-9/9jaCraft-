@@ -22,6 +22,10 @@ function showBookings() {
 function switchPage(pageId) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.getElementById(pageId).classList.add("active");
+
+  document.querySelectorAll(".bottom-nav-item").forEach(item => {
+    item.classList.toggle("active", item.dataset.page === pageId);
+  });
 }
 
 function toggleOtherProfession() {
