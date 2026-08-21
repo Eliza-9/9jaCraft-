@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillLink Nigeria - Premium Artisan Marketplace</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="authContainer" class="auth-container">
+    <div id="loginPage" class="auth-page active">
+      <div class="auth-card">
+        <div class="auth-header">
+          <h1>🔧 SkillLink Nigeria</h1>
+          <p>Premium Artisan Marketplace</p>
+        </div>
+        <form id="loginForm" class="auth-form">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" required placeholder="your@email.com">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" required placeholder="Enter password">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Login</button>
+          <p class="auth-toggle">Don't have an account? <a href="#" onclick="switchToSignup()">Sign Up</a></p>
+        </form>
+      </div>
+    </div>
+
+    <div id="signupPage" class="auth-page">
+      <div class="auth-card">
+        <div class="auth-header">
+          <h1>🔧 SkillLink Nigeria</h1>
+          <p>Join Our Marketplace</p>
+        </div>
+        <form id="signupForm" class="auth-form">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="signupName" required placeholder="Your full name">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="signupEmail" required placeholder="your@email.com">
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="tel" id="signupPhone" placeholder="08012345678">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="signupPassword" required placeholder="Create password">
+          </div>
+          <div class="form-group">
+            <label>I am a...</label>
+            <select id="signupRole" required>
+              <option value="">Select role</option>
+              <option value="customer">Customer (Looking for services)</option>
+              <option value="artisan">Artisan (Offering services)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
+          <p class="auth-toggle">Already have an account? <a href="#" onclick="switchToLogin()">Login</a></p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="mainApp" class="main-app" style="display: none;">
+ <header class="header">
+  <div class="header-content">
+    <div class="logo">🔧 SkillLink</div>
+    <button onclick="logout()" class="btn btn-outline">Logout</button>
+  </div>
+</header>
+
+<nav class="bottom-nav">
+  <button class="bottom-nav-item active" data-page="dashboardPage" onclick="showDashboard()">
+    <span class="icon">🏠</span>
+    <span>Home</span>
+  </button>
+  <button class="bottom-nav-item" id="profileNavLink" data-page="profilePage" onclick="showProfile()" style="display:none;">
+    <span class="icon">🛠️</span>
+    <span>Profile</span>
+  </button>
+  <button class="bottom-nav-item" data-page="artisansPage" onclick="showArtisans()">
+    <span class="icon">🔍</span>
+    <span>Find</span>
+  </button>
+  <button class="bottom-nav-item" data-page="bookingsPage" onclick="showBookings()">
+    <span class="icon">📅</span>
+    <span>Bookings</span>
+  </button>
+</nav>
+
+    <div id="dashboardPage" class="page active">
+      <div class="container">
+        <div class="dashboard-grid">
+          <div class="dashboard-card">
+            <h2 id="welcomeText">Welcome back!</h2>
+            <p id="userEmail"></p>
+            <div class="user-info" id="userInfo"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="profilePage" class="page">
+      <div class="container">
+        <h2>My Artisan Listing</h2>
+        <form id="artisanProfileForm" class="auth-form">
+          <div class="form-group">
+            <label>Trade</label>
+            <select id="profileProfession" required onchange="toggleOtherProfession()">
+              <option value="">Select a trade</option>
+              <option>Plumber</option>
+              <option>Electrician</option>
+              <option>Carpenter</option>
+              <option>Painter</option>
+              <option>Mechanic</option>
+              <option>Tailor</option>
+              <option>Hairdresser/Barber</option>
+              <option>Mason/Bricklayer</option>
+              <option>Welder</option>
+              <option>AC Repair Technician</option>
+              <option>Generator Repair Technician</option>
+              <option>Cleaner</option>
+              <option>Photographer</option>
+              <option>Caterer</option>
+              <option value="Other">Other (type below)</option>
+            </select>
+          </div>
+          <div class="form-group" id="otherProfessionGroup" style="display:none;">
+            <label>Enter your trade</label>
+            <input type="text" id="profileProfessionOther" placeholder="e.g. Dog Grooming">
+          </div>
+          <div class="form-group">
+            <label>State</label>
+            <select id="profileState" required>
+              <option value="">Select state</option>
+              <option>Abia</option>
+              <option>Adamawa</option>
+              <option>Akwa Ibom</option>
+              <option>Anambra</option>
+              <option>Bauchi</option>
+              <option>Bayelsa</option>
+              <option>Benue</option>
+              <option>Borno</option>
+              <option>Cross River</option>
+              <option>Delta</option>
+              <option>Ebonyi</option>
+              <option>Edo</option>
+              <option>Ekiti</option>
+              <option>Enugu</option>
+              <option>FCT (Abuja)</option>
+              <option>Gombe</option>
+              <option>Imo</option>
+              <option>Jigawa</option>
+              <option>Kaduna</option>
+              <option>Kano</option>
+              <option>Katsina</option>
+              <option>Kebbi</option>
+              <option>Kogi</option>
+              <option>Kwara</option>
+              <option>Lagos</option>
+              <option>Nasarawa</option>
+              <option>Niger</option>
+              <option>Ogun</option>
+              <option>Ondo</option>
+              <option>Osun</option>
+              <option>Oyo</option>
+              <option>Plateau</option>
+              <option>Rivers</option>
+              <option>Sokoto</option>
+              <option>Taraba</option>
+              <option>Yobe</option>
+              <option>Zamfara</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>LGA</label>
+            <input type="text" id="profileLga" required placeholder="e.g. Ikeja">
+          </div>
+          <div class="form-group">
+            <label>Street / Address</label>
+            <input type="text" id="profileLocation" required placeholder="Street name">
+          </div>
+          <div class="form-group">
+            <label>City</label>
+            <input type="text" id="profileCity" placeholder="e.g. Lagos City">
+          </div>
+          <div class="form-group">
+            <label>Area/Neighborhood</label>
+            <input type="text" id="profileArea" placeholder="e.g. Yaba">
+          </div>
+          <div class="form-group">
+            <label>Price Range</label>
+            <input type="text" id="profilePriceRange" placeholder="e.g. ₦5,000 - ₦20,000">
+          </div>
+          <div class="form-group">
+            <label>Years of Experience</label>
+            <input type="number" id="profileExperience" min="0" placeholder="e.g. 5">
+          </div>
+          <div class="form-group">
+            <label>Bio</label>
+            <textarea id="profileBio" rows="4" placeholder="Tell customers about your work"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Save Listing</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="artisansPage" class="page">
+      <div class="container">
+        <div class="search-section">
+          <h2>Find Skilled Artisans</h2>
+          <div class="search-form">
+            <input type="text" id="searchQuery" placeholder="Search by service or name...">
+            <select id="stateFilter">
+              <option value="">All States</option>
+              <option>Abia</option>
+              <option>Adamawa</option>
+              <option>Akwa Ibom</option>
+              <option>Anambra</option>
+              <option>Bauchi</option>
+              <option>Bayelsa</option>
+              <option>Benue</option>
+              <option>Borno</option>
+              <option>Cross River</option>
+              <option>Delta</option>
+              <option>Ebonyi</option>
+              <option>Edo</option>
+              <option>Ekiti</option>
+              <option>Enugu</option>
+              <option>FCT (Abuja)</option>
+              <option>Gombe</option>
+              <option>Imo</option>
+              <option>Jigawa</option>
+              <option>Kaduna</option>
+              <option>Kano</option>
+              <option>Katsina</option>
+              <option>Kebbi</option>
+              <option>Kogi</option>
+              <option>Kwara</option>
+              <option>Lagos</option>
+              <option>Nasarawa</option>
+              <option>Niger</option>
+              <option>Ogun</option>
+              <option>Ondo</option>
+              <option>Osun</option>
+              <option>Oyo</option>
+              <option>Plateau</option>
+              <option>Rivers</option>
+              <option>Sokoto</option>
+              <option>Taraba</option>
+              <option>Yobe</option>
+              <option>Zamfara</option>
+            </select>
+            <input type="text" id="lgaFilter" placeholder="LGA">
+            <select id="sortFilter" onchange="searchArtisans()">
+              <option value="rating">Sort by Rating</option>
+              <option value="experience">Sort by Experience</option>
+              <option value="newest">Newest First</option>
+            </select>
+            <button onclick="searchArtisans()" class="btn btn-primary">Search</button>
+          </div>
+        </div>
+        <div id="artisansList" class="artisans-grid"></div>
+      </div>
+    </div>
+
+    <div id="bookingsPage" class="page">
+      <div class="container">
+        <h2>My Bookings</h2>
+        <div id="bookingsList" class="bookings-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bookingModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2>Book Artisan</h2>
+      <form id="bookingForm" class="booking-form">
+        <div class="form-group">
+          <label>Service Required</label>
+          <input type="text" id="bookingService" required>
+        </div>
+        <div class="form-group">
+          <label>Message to Artisan</label>
+          <textarea id="bookingMessage" rows="3" required placeholder="Describe what you need"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Preferred Date (Optional)</label>
+          <input type="date" id="bookingDate">
+        </div>
+        <div class="form-group">
+          <label>Preferred Time (Optional)</label>
+          <input type="time" id="bookingTime">
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" id="bookingLocation" required>
+        </div>
+        <div class="form-group">
+          <label>Notes (Optional)</label>
+          <textarea id="bookingNotes" rows="4"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Submit Booking</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/auth.js"></script>
+  <script src="/app.js"></script>
+</body>
+          </html>
