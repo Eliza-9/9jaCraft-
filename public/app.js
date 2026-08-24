@@ -1,4 +1,5 @@
 let selectedArtisan = null;
+const pendingRatings = {};
 
 function showDashboard() {
   switchPage("dashboardPage");
@@ -151,7 +152,7 @@ function renderArtisans(artisans) {
         </div>
       </div>
       <div class="artisan-body">
-        <div class="artisan-rating">⭐ ${a.rating}</div>
+        <div class="artisan-rating">⭐ ${a.rating}${a.review_count ? ` (${a.review_count} review${a.review_count === 1 ? '' : 's'})` : ' (no reviews yet)'}</div>
         <div class="artisan-meta">📍 ${a.location}${a.area ? ', ' + a.area : ''}${a.city ? ', ' + a.city : ''}, ${a.lga}, ${a.state}</div>
         <div class="artisan-meta">👤 ${a.experience} years experience</div>
         ${a.price_range ? `<div class="artisan-meta">💰 ${a.price_range}</div>` : ""}
@@ -159,6 +160,16 @@ function renderArtisans(artisans) {
           ${a.available ? '● Available' : '● Currently unavailable'}
         </div>
         <p class="artisan-bio">${a.bio}</p>
+        ${a.recent_reviews && a.recent_reviews.length > 0 ? `
+          <div class="review-snippets">
+            ${a.recent_reviews.map(r => `
+              <div class="review-snippet">
+                <span class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+                ${r.comment ? `<span class="review-comment">"${r.comment}"</span>` : ""}
+              </div>
+            `).join("")}
+          </div>
+        ` : ""}
         <div class="artisan-actions">
           <button class="btn btn-primary" onclick="openBookingModal(${a.id}, '${a.name}')">Book</button>
           ${a.phone ? `<a href="https://wa.me/234${a.phone.replace(/^0/, '')}" target="_blank" class="btn btn-outline">WhatsApp</a>` : `<span style="display:inline-block; padding:8px 16px; background:#f0f0f0; color:#666; border-radius:6px; font-size:14px;" title="Contact available after booking">🔒 WhatsApp after booking</span>`}
@@ -257,8 +268,64 @@ function renderBookings(bookings) {
           <button class="btn btn-primary" onclick="updateBookingStatus(${b.id}, 'Completed')">Mark Completed</button>
         </div>
       ` : ""}
+      ${currentUser.role === "customer" && b.status === "Completed" && b.existing_rating ? `
+        <div class="review-block">
+          <p class="review-given-label">Your rating:</p>
+          <span class="review-stars">${'★'.repeat(b.existing_rating)}${'☆'.repeat(5 - b.existing_rating)}</span>
+          ${b.existing_comment ? `<p class="review-comment">"${b.existing_comment}"</p>` : ""}
+        </div>
+      ` : ""}
+      ${currentUser.role === "customer" && b.status === "Completed" && !b.existing_rating ? `
+        <div class="review-block">
+          <p class="review-given-label">Rate this artisan:</p>
+          <div class="star-picker" id="starPicker-${b.id}">
+            ${[1,2,3,4,5].map(n => `<span class="star-pick" data-value="${n}" onclick="setRating(${b.id}, ${n})">☆</span>`).join("")}
+          </div>
+          <textarea id="reviewComment-${b.id}" rows="2" placeholder="Optional comment"></textarea>
+          <button class="btn btn-primary" style="margin-top:8px;" onclick="submitReview(${b.id})">Submit Review</button>
+        </div>
+      ` : ""}
     </div>
   `).join("");
+}
+
+function setRating(bookingId, value) {
+  pendingRatings[bookingId] = value;
+  const picker = document.getElementById(`starPicker-${bookingId}`);
+  picker.querySelectorAll(".star-pick").forEach(star => {
+    const starValue = parseInt(star.dataset.value);
+    star.textContent = starValue <= value ? "★" : "☆";
+    star.classList.toggle("filled", starValue <= value);
+  });
+}
+
+async function submitReview(bookingId) {
+  const rating = pendingRatings[bookingId];
+  if (!rating) {
+    alert("Please select a star rating first");
+    return;
+  }
+  const comment = document.getElementById(`reviewComment-${bookingId}`).value;
+
+  try {
+    const response = await fetch(`/api/bookings/${bookingId}/review`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ rating, comment })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      alert(data.error || "Failed to submit review");
+      return;
+    }
+    delete pendingRatings[bookingId];
+    loadBookings();
+  } catch (error) {
+    alert("Failed to submit review: " + error.message);
+  }
 }
 
 async function updateBookingStatus(bookingId, status) {
