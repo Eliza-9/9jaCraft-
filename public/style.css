@@ -921,3 +921,72 @@ textarea:focus-visible {
 .main-app .container {
   padding-bottom: 100px;
                                            }
+/* =========================================================
+   Reviews & star ratings
+   ========================================================= */
+
+.review-snippets {
+  margin: 4px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.review-snippet {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--r-sm);
+}
+
+.review-stars { color: var(--warning); letter-spacing: 1px; }
+
+.review-comment {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.review-block {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.review-given-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 6px;
+}
+
+.star-picker { display: flex; gap: 4px; margin-bottom: 10px; }
+
+.star-pick {
+  font-size: 26px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+  line-height: 1;
+}
+.star-pick:hover { transform: scale(1.15); }
+.star-pick.filled { color: var(--warning); }
+
+.review-block textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-sm);
+  resize: vertical;
+}
+.review-block textarea:focus {
+  outline: none;
+  border-color: var(--teal-500);
+     }
