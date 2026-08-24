@@ -865,3 +865,59 @@ textarea:focus-visible {
   text-align: center;
 }
 .site-footer p { font-size: var(--fs-sm); color: var(--text-muted); }
+/* =========================================================
+   Bottom navigation — fixed, rounded icon buttons
+   ========================================================= */
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(6, 11, 20, 0.78);
+  border-top: 1px solid var(--glass-border);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  max-width: 90px;
+  padding: 10px 6px;
+  border: none;
+  border-radius: var(--r-lg);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  transition: color var(--transition-base), background var(--transition-base), transform var(--transition-fast);
+}
+
+.bottom-nav-item .icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.bottom-nav-item:active { transform: scale(0.94); }
+
+.bottom-nav-item.active {
+  color: var(--teal-400);
+  background: rgba(20, 184, 166, 0.12);
+  border: 1px solid rgba(20, 184, 166, 0.25);
+}
+
+/* Keep page content from hiding behind the fixed bottom bar */
+.main-app .container {
+  padding-bottom: 100px;
+                                           }
