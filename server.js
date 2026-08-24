@@ -14,12 +14,12 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-app.use(cors());
-app.use(express.json());
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "landing.html"));
 });
 
+app.use(cors());
+app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 const verifyToken = (req, res, next) => {
@@ -69,6 +69,7 @@ async function initDB() {
   await pool.query(`ALTER TABLE artisans ADD COLUMN IF NOT EXISTS area TEXT`);
   await pool.query(`ALTER TABLE artisans ADD COLUMN IF NOT EXISTS price_range TEXT`);
   await pool.query(`ALTER TABLE artisans ADD COLUMN IF NOT EXISTS verified INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE artisans ADD COLUMN IF NOT EXISTS review_count INTEGER DEFAULT 0`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS bookings (
@@ -86,6 +87,18 @@ async function initDB() {
   `);
 
   await pool.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS message TEXT`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reviews (
+      id SERIAL PRIMARY KEY,
+      booking_id INTEGER NOT NULL UNIQUE REFERENCES bookings(id),
+      artisan_id INTEGER NOT NULL REFERENCES artisans(id),
+      customer_id INTEGER NOT NULL REFERENCES users(id),
+      rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+      comment TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
   console.log("Database tables ready");
 }
@@ -152,7 +165,7 @@ app.get("/api/artisans", verifyToken, async (req, res) => {
   const q = req.query.q || "";
   const state = req.query.state || "";
   const lga = req.query.lga || "";
-  const sort = req.query.sort || "rating"; // rating | experience | newest
+  const sort = req.query.sort || "rating";
 
   const sortMap = {
     rating: "a.rating DESC",
@@ -166,7 +179,9 @@ app.get("/api/artisans", verifyToken, async (req, res) => {
       `SELECT a.*, u.name, u.bio,
         CASE WHEN EXISTS (
           SELECT 1 FROM bookings b WHERE b.artisan_id = a.id AND b.customer_id = $4
-        ) OR a.user_id = $4 THEN u.phone ELSE NULL END AS phone
+        ) OR a.user_id = $4 THEN u.phone ELSE NULL END AS phone,
+        (SELECT COALESCE(json_agg(json_build_object('rating', rv.rating, 'comment', rv.comment) ORDER BY rv.created_at DESC), '[]')
+         FROM (SELECT * FROM reviews WHERE reviews.artisan_id = a.id ORDER BY created_at DESC LIMIT 2) rv) AS recent_reviews
        FROM artisans a
        JOIN users u ON a.user_id = u.id
        WHERE (u.name ILIKE $1 OR a.profession ILIKE $1)
@@ -188,7 +203,9 @@ app.get("/api/artisans/:id", verifyToken, async (req, res) => {
       `SELECT a.*, u.name, u.bio,
         CASE WHEN EXISTS (
           SELECT 1 FROM bookings b WHERE b.artisan_id = a.id AND b.customer_id = $2
-        ) OR a.user_id = $2 THEN u.phone ELSE NULL END AS phone
+        ) OR a.user_id = $2 THEN u.phone ELSE NULL END AS phone,
+        (SELECT COALESCE(json_agg(json_build_object('rating', rv.rating, 'comment', rv.comment) ORDER BY rv.created_at DESC), '[]')
+         FROM (SELECT * FROM reviews WHERE reviews.artisan_id = a.id ORDER BY created_at DESC LIMIT 5) rv) AS recent_reviews
        FROM artisans a
        JOIN users u ON a.user_id = u.id
        WHERE a.id = $1`,
@@ -203,7 +220,6 @@ app.get("/api/artisans/:id", verifyToken, async (req, res) => {
   }
 });
 
-// Get current artisan's own profile (if it exists)
 app.get("/api/me/artisan-profile", verifyToken, async (req, res) => {
   if (req.user.role !== "artisan") {
     return res.status(403).json({ error: "Only artisans have this" });
@@ -216,7 +232,6 @@ app.get("/api/me/artisan-profile", verifyToken, async (req, res) => {
   }
 });
 
-// Create or update artisan profile
 app.post("/api/artisans", verifyToken, async (req, res) => {
   if (req.user.role !== "artisan") {
     return res.status(403).json({ error: "Only artisans can create profiles" });
@@ -274,7 +289,6 @@ app.post("/api/bookings", verifyToken, async (req, res) => {
   }
 });
 
-// Artisan accepts/declines/completes a booking
 app.patch("/api/bookings/:id/status", verifyToken, async (req, res) => {
   if (req.user.role !== "artisan") {
     return res.status(403).json({ error: "Only artisans can update booking status" });
@@ -301,12 +315,64 @@ app.patch("/api/bookings/:id/status", verifyToken, async (req, res) => {
   }
 });
 
+// Submit a review for a completed booking
+app.post("/api/bookings/:id/review", verifyToken, async (req, res) => {
+  if (req.user.role !== "customer") {
+    return res.status(403).json({ error: "Only customers can leave reviews" });
+  }
+  const { rating, comment } = req.body;
+  const ratingNum = parseInt(rating);
+  if (!ratingNum || ratingNum < 1 || ratingNum > 5) {
+    return res.status(400).json({ error: "Rating must be between 1 and 5" });
+  }
+  try {
+    const booking = await pool.query(
+      "SELECT id, artisan_id, status FROM bookings WHERE id = $1 AND customer_id = $2",
+      [req.params.id, req.user.id]
+    );
+    if (booking.rows.length === 0) {
+      return res.status(404).json({ error: "Booking not found" });
+    }
+    if (booking.rows[0].status !== "Completed") {
+      return res.status(400).json({ error: "You can only review completed bookings" });
+    }
+
+    const existingReview = await pool.query("SELECT id FROM reviews WHERE booking_id = $1", [req.params.id]);
+    if (existingReview.rows.length > 0) {
+      return res.status(400).json({ error: "You already reviewed this booking" });
+    }
+
+    const artisanId = booking.rows[0].artisan_id;
+
+    await pool.query(
+      `INSERT INTO reviews (booking_id, artisan_id, customer_id, rating, comment)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [req.params.id, artisanId, req.user.id, ratingNum, comment || ""]
+    );
+
+    // Recalculate live average rating + review count
+    await pool.query(
+      `UPDATE artisans SET
+        rating = (SELECT ROUND(AVG(rating)::numeric, 1) FROM reviews WHERE artisan_id = $1),
+        review_count = (SELECT COUNT(*) FROM reviews WHERE artisan_id = $1)
+       WHERE id = $1`,
+      [artisanId]
+    );
+
+    res.status(201).json({ message: "Review submitted" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to submit review" });
+  }
+});
+
 app.get("/api/bookings", verifyToken, async (req, res) => {
   try {
     const query = req.user.role === "customer"
-      ? `SELECT b.*, a.profession, u.name FROM bookings b
+      ? `SELECT b.*, a.profession, u.name, r.rating AS existing_rating, r.comment AS existing_comment
+         FROM bookings b
          JOIN artisans a ON b.artisan_id = a.id
          JOIN users u ON a.user_id = u.id
+         LEFT JOIN reviews r ON r.booking_id = b.id
          WHERE b.customer_id = $1
          ORDER BY b.created_at DESC`
       : `SELECT b.*, u.name as customer_name, u.phone FROM bookings b
