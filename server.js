@@ -405,5 +405,5 @@ app.get("/api/me", verifyToken, async (req, res) => {
 
 app.listen(PORT, async () => {
   await initDB();
-  console.log(`✨ SkillLink Nigeria running on port ${PORT}`);
+  console.log(`✨ 9jaCraft running on port ${PORT}`);
 });
