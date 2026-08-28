@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: skilllink-nigeria
+    name: 9jaCraft 
     env: node
     plan: free
     buildCommand: npm install
