@@ -351,10 +351,14 @@ app.post("/api/bookings/:id/review", verifyToken, async (req, res) => {
     );
 
     // Recalculate live average rating + review count
-    await pool.query(
+        await pool.query(
       `UPDATE artisans SET
         rating = (SELECT ROUND(AVG(rating)::numeric, 1) FROM reviews WHERE artisan_id = $1),
-        review_count = (SELECT COUNT(*) FROM reviews WHERE artisan_id = $1)
+        review_count = (SELECT COUNT(*) FROM reviews WHERE artisan_id = $1),
+        verified = CASE
+          WHEN (SELECT COUNT(*) FROM reviews WHERE artisan_id = $1) >= 3
+           AND (SELECT AVG(rating) FROM reviews WHERE artisan_id = $1) >= 4
+          THEN 1 ELSE verified END
        WHERE id = $1`,
       [artisanId]
     );
