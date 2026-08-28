@@ -27,7 +27,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     });
     const data = await response.json();
     if (!response.ok) {
-      alert(data.error || "Login failed");
+      showResponseModal(data.error || "Login failed", "error");
       return;
     }
     authToken = data.token;
@@ -36,7 +36,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     localStorage.setItem("currentUser", JSON.stringify(currentUser));
     showApp();
   } catch (error) {
-    alert("Login failed: " + error.message);
+    showResponseModal("Login failed: " + error.message, "error");
   }
 });
 
@@ -48,7 +48,7 @@ document.getElementById("signupForm").addEventListener("submit", async (e) => {
   const password = document.getElementById("signupPassword").value;
   const role = document.getElementById("signupRole").value;
   if (!role) {
-    alert("Please select a role");
+    showResponseModal("Please select a role", "error");
     return;
   }
   try {
@@ -59,7 +59,7 @@ document.getElementById("signupForm").addEventListener("submit", async (e) => {
     });
     const data = await response.json();
     if (!response.ok) {
-      alert(data.error || "Signup failed");
+      showResponseModal(data.error || "Signup failed", "error");
       return;
     }
     authToken = data.token;
@@ -68,7 +68,7 @@ document.getElementById("signupForm").addEventListener("submit", async (e) => {
     localStorage.setItem("currentUser", JSON.stringify(currentUser));
     showApp();
   } catch (error) {
-    alert("Signup failed: " + error.message);
+    showResponseModal("Signup failed: " + error.message, "error");
   }
 });
 
@@ -81,10 +81,9 @@ function showApp() {
   welcomeText.textContent = `Welcome, ${currentUser.name}!`;
   userEmail.textContent = currentUser.email;
 
-  // Only artisans get the "My Profile" nav link
   const profileNavLink = document.getElementById("profileNavLink");
   if (profileNavLink) {
-    profileNavLink.style.display = currentUser.role === "artisan" ? "inline-block" : "none";
+    profileNavLink.style.display = currentUser.role === "artisan" ? "flex" : "none";
   }
 
   loadUserInfo();
@@ -114,4 +113,4 @@ async function loadUserInfo() {
   } catch (error) {
     console.error("Failed to load user info");
   }
-                                                      }
+  }
