@@ -29,6 +29,22 @@ function switchPage(pageId) {
   });
 }
 
+function showResponseModal(message, type = "success") {
+  const modal = document.getElementById("responseModal");
+  const icon = document.getElementById("responseIcon");
+  const msg = document.getElementById("responseMessage");
+
+  icon.textContent = type === "success" ? "✅" : "⚠️";
+  icon.className = `response-icon ${type}`;
+  msg.textContent = message;
+
+  modal.classList.add("active");
+}
+
+function closeResponseModal() {
+  document.getElementById("responseModal").classList.remove("active");
+}
+
 function toggleOtherProfession() {
   const select = document.getElementById("profileProfession");
   const group = document.getElementById("otherProfessionGroup");
@@ -87,7 +103,7 @@ document.getElementById("artisanProfileForm").addEventListener("submit", async (
   };
 
   if (!profession) {
-    alert("Please select or enter your trade");
+    showResponseModal("Please select or enter your trade", "error");
     return;
   }
 
@@ -104,13 +120,13 @@ document.getElementById("artisanProfileForm").addEventListener("submit", async (
     const data = await response.json();
 
     if (!response.ok) {
-      alert(data.error || "Failed to save listing");
+      showResponseModal(data.error || "Failed to save listing", "error");
       return;
     }
 
-    alert("✅ " + data.message);
+    showResponseModal(data.message, "success");
   } catch (error) {
-    alert("Failed to save listing: " + error.message);
+    showResponseModal("Failed to save listing: " + error.message, "error");
   }
 });
 
@@ -215,15 +231,15 @@ document.getElementById("bookingForm").addEventListener("submit", async (e) => {
     const data = await response.json();
 
     if (!response.ok) {
-      alert(data.error || "Booking failed");
+      showResponseModal(data.error || "Booking failed", "error");
       return;
     }
 
-    alert(`✅ Booking #${data.bookingId} submitted! Status: ${data.status}`);
+    showResponseModal(`Booking #${data.bookingId} submitted! Status: ${data.status}`, "success");
     closeModal();
     loadBookings();
   } catch (error) {
-    alert("Booking failed: " + error.message);
+    showResponseModal("Booking failed: " + error.message, "error");
   }
 });
 
@@ -302,7 +318,7 @@ function setRating(bookingId, value) {
 async function submitReview(bookingId) {
   const rating = pendingRatings[bookingId];
   if (!rating) {
-    alert("Please select a star rating first");
+    showResponseModal("Please select a star rating first", "error");
     return;
   }
   const comment = document.getElementById(`reviewComment-${bookingId}`).value;
@@ -318,13 +334,14 @@ async function submitReview(bookingId) {
     });
     const data = await response.json();
     if (!response.ok) {
-      alert(data.error || "Failed to submit review");
+      showResponseModal(data.error || "Failed to submit review", "error");
       return;
     }
     delete pendingRatings[bookingId];
+    showResponseModal("Review submitted, thank you!", "success");
     loadBookings();
   } catch (error) {
-    alert("Failed to submit review: " + error.message);
+    showResponseModal("Failed to submit review: " + error.message, "error");
   }
 }
 
@@ -340,12 +357,13 @@ async function updateBookingStatus(bookingId, status) {
     });
     const data = await response.json();
     if (!response.ok) {
-      alert(data.error || "Update failed");
+      showResponseModal(data.error || "Update failed", "error");
       return;
     }
+    showResponseModal(`Booking marked ${status}`, "success");
     loadBookings();
   } catch (error) {
-    alert("Update failed: " + error.message);
+    showResponseModal("Update failed: " + error.message, "error");
   }
 }
 
@@ -353,5 +371,9 @@ window.onclick = (event) => {
   const modal = document.getElementById("bookingModal");
   if (event.target === modal) {
     closeModal();
+  }
+  const respModal = document.getElementById("responseModal");
+  if (event.target === respModal) {
+    closeResponseModal();
   }
 };
