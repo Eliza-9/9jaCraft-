@@ -86,7 +86,8 @@ function showApp() {
     profileNavLink.style.display = currentUser.role === "artisan" ? "flex" : "none";
   }
 
-  loadUserInfo();
+    loadUserInfo();
+  loadDashboardExtras();
 }
 
 function logout() {
