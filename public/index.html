@@ -68,50 +68,31 @@
   </div>
 
   <div id="mainApp" class="main-app" style="display: none;">
- <header class="header">
-  <div class="header-content">
-    <div class="logo">🔧 9jaCraft</div>
-    <button onclick="logout()" class="btn btn-outline">Logout</button>
-  </div>
-</header>
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">🔧 9jaCraft</div>
+        <button onclick="logout()" class="btn btn-outline">Logout</button>
+      </div>
+    </header>
 
-<nav class="bottom-nav">
-  <button class="bottom-nav-item active" data-page="dashboardPage" onclick="showDashboard()">
-    <span class="icon">🏠</span>
-    <span>Home</span>
-  </button>
-  <button class="bottom-nav-item" id="profileNavLink" data-page="profilePage" onclick="showProfile()" style="display:none;">
-    <span class="icon">🛠️</span>
-    <span>Profile</span>
-  </button>
-  <button class="bottom-nav-item" data-page="artisansPage" onclick="showArtisans()">
-    <span class="icon">🔍</span>
-    <span>Find</span>
-  </button>
-  <button class="bottom-nav-item" data-page="bookingsPage" onclick="showBookings()">
-    <span class="icon">📅</span>
-    <span>Bookings</span>
-  </button>
-</nav>
-
-<nav class="bottom-nav">
-  <button class="bottom-nav-item active" data-page="dashboardPage" onclick="showDashboard()">
-    <span class="icon">🏠</span>
-    <span>Home</span>
-  </button>
-  <button class="bottom-nav-item" id="profileNavLink" data-page="profilePage" onclick="showProfile()" style="display:none;">
-    <span class="icon">🛠️</span>
-    <span>Profile</span>
-  </button>
-  <button class="bottom-nav-item" data-page="artisansPage" onclick="showArtisans()">
-    <span class="icon">🔍</span>
-    <span>Find</span>
-  </button>
-  <button class="bottom-nav-item" data-page="bookingsPage" onclick="showBookings()">
-    <span class="icon">📅</span>
-    <span>Bookings</span>
-  </button>
-</nav>
+    <nav class="bottom-nav">
+      <button class="bottom-nav-item active" data-page="dashboardPage" onclick="showDashboard()">
+        <span class="icon">🏠</span>
+        <span>Home</span>
+      </button>
+      <button class="bottom-nav-item" id="profileNavLink" data-page="profilePage" onclick="showProfile()" style="display:none;">
+        <span class="icon">🛠️</span>
+        <span>Profile</span>
+      </button>
+      <button class="bottom-nav-item" data-page="artisansPage" onclick="showArtisans()">
+        <span class="icon">🔍</span>
+        <span>Find</span>
+      </button>
+      <button class="bottom-nav-item" data-page="bookingsPage" onclick="showBookings()">
+        <span class="icon">📅</span>
+        <span>Bookings</span>
+      </button>
+    </nav>
 
     <div id="dashboardPage" class="page active">
       <div class="container">
@@ -331,7 +312,7 @@
     </div>
   </div>
 
-    <div id="responseModal" class="response-modal">
+  <div id="responseModal" class="response-modal">
     <div class="response-modal-content">
       <div id="responseIcon" class="response-icon"></div>
       <p id="responseMessage" class="response-message"></p>
@@ -340,7 +321,6 @@
   </div>
 
   <script src="/auth.js"></script>
-  <script src="/auth.js"></script>
   <script src="/app.js"></script>
 </body>
-          </html>
+  </html>
