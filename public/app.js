@@ -3,6 +3,70 @@ const pendingRatings = {};
 
 function showDashboard() {
   switchPage("dashboardPage");
+  loadDashboardExtras();
+}
+
+async function loadDashboardExtras() {
+  try {
+    const bookingsRes = await fetch("/api/bookings", { headers: { "Authorization": `Bearer ${authToken}` } });
+    const bookings = await bookingsRes.json();
+
+    const counts = { Pending: 0, Accepted: 0, Completed: 0 };
+    bookings.forEach(b => { if (counts[b.status] !== undefined) counts[b.status]++; });
+
+    const statsContainer = document.getElementById("dashboardStats");
+    if (statsContainer) {
+      statsContainer.innerHTML = `
+        <div class="stat-card">
+          <span class="stat-number">${counts.Pending}</span>
+          <span class="stat-label">Pending</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number">${counts.Accepted}</span>
+          <span class="stat-label">Accepted</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number">${counts.Completed}</span>
+          <span class="stat-label">Completed</span>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error("Failed to load dashboard stats", error);
+  }
+
+  if (currentUser.role === "artisan") {
+    try {
+      const profileRes = await fetch("/api/me/artisan-profile", { headers: { "Authorization": `Bearer ${authToken}` } });
+      const profile = await profileRes.json();
+      const summaryContainer = document.getElementById("dashboardArtisanSummary");
+      if (!summaryContainer) return;
+
+      if (!profile) {
+        summaryContainer.innerHTML = `
+          <div class="dashboard-card cta-card">
+            <h3>You haven't created your listing yet</h3>
+            <p>Customers can't find you until you set up your artisan profile.</p>
+            <button class="btn btn-primary" onclick="showProfile()">Create Listing</button>
+          </div>
+        `;
+      } else {
+        summaryContainer.innerHTML = `
+          <div class="dashboard-card artisan-summary-card">
+            <div class="artisan-summary-header">
+              <h3>${profile.profession} ${profile.verified ? '<span class="verified-badge" title="Verified">✔️</span>' : ''}</h3>
+              <span class="artisan-status ${profile.available ? 'available' : 'unavailable'}">${profile.available ? '● Available' : '● Unavailable'}</span>
+            </div>
+            <div class="artisan-rating">⭐ ${profile.rating}${profile.review_count ? ` (${profile.review_count} reviews)` : ' (no reviews yet)'}</div>
+            <p class="artisan-meta">📍 ${profile.location}${profile.city ? ', ' + profile.city : ''}, ${profile.lga}, ${profile.state}</p>
+            <button class="btn btn-outline" onclick="showProfile()">Edit Listing</button>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error("Failed to load artisan summary", error);
+    }
+  }
 }
 
 function showProfile() {
