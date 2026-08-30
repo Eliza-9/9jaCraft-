@@ -1031,3 +1031,54 @@ textarea:focus-visible {
   line-height: 1.5;
   margin-bottom: 22px;
    }
+
+/* =========================================================
+   Dashboard stats & artisan summary
+   ========================================================= */
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.stat-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--r-md);
+  padding: 18px 12px;
+  text-align: center;
+}
+
+.stat-number {
+  display: block;
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--teal-400);
+}
+
+.stat-label {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cta-card { text-align: center; }
+.cta-card h3 { font-size: var(--fs-md); margin-bottom: 8px; }
+.cta-card p { color: var(--text-secondary); font-size: var(--fs-sm); margin-bottom: 16px; }
+
+.artisan-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.artisan-summary-header h3 { font-size: var(--fs-md); }
+
+.artisan-summary-card .artisan-rating { margin-bottom: 8px; }
+.artisan-summary-card .artisan-meta { margin-bottom: 16px; color: var(--text-secondary); font-size: var(--fs-sm); }
