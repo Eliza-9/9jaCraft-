@@ -51,10 +51,13 @@
             <label>Phone Number</label>
             <input type="tel" id="signupPhone" placeholder="08012345678">
           </div>
-          <div class="form-group">
+                    <div class="form-group">
             <label>Password</label>
-            <input type="password" id="signupPassword" required placeholder="Create password">
-          </div>
+            <div class="password-field">
+              <input type="password" id="signupPassword" required placeholder="Create password">
+              <button type="button" class="password-toggle" onclick="togglePassword('signupPassword', this)">👁️</button>
+            </div>
+                    </div>
           <div class="form-group">
             <label>I am a...</label>
             <select id="signupRole" required>
