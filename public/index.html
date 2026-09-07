@@ -19,10 +19,13 @@
             <label>Email</label>
             <input type="email" id="loginEmail" required placeholder="your@email.com">
           </div>
-          <div class="form-group">
+                    <div class="form-group">
             <label>Password</label>
-            <input type="password" id="loginPassword" required placeholder="Enter password">
-          </div>
+            <div class="password-field">
+              <input type="password" id="loginPassword" required placeholder="Enter password">
+              <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)">👁️</button>
+            </div>
+                </div>
           <button type="submit" class="btn btn-primary btn-block">Login</button>
           <p class="auth-toggle">Don't have an account? <a href="#" onclick="switchToSignup()">Sign Up</a></p>
         </form>
