@@ -1108,3 +1108,20 @@ textarea:focus-visible {
   line-height: 1;
   min-height: unset;
 }
+/* =========================================================
+   Eye icon sizing (overrides emoji-era button sizing)
+   ========================================================= */
+
+.password-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+}
+.password-toggle:hover { color: var(--teal-400); }
+
+.eye-icon {
+  width: 20px;
+  height: 20px;
+   }
