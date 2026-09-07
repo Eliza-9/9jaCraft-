@@ -114,6 +114,12 @@ function toggleOtherProfession() {
   const group = document.getElementById("otherProfessionGroup");
   group.style.display = select.value === "Other" ? "block" : "none";
 }
+function togglePassword(inputId, button) {
+  const input = document.getElementById(inputId);
+  const isHidden = input.type === "password";
+  input.type = isHidden ? "text" : "password";
+  button.textContent = isHidden ? "🙈" : "👁️";
+  }
 
 async function loadMyProfile() {
   try {
