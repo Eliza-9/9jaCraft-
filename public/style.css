@@ -1082,3 +1082,29 @@ textarea:focus-visible {
 
 .artisan-summary-card .artisan-rating { margin-bottom: 8px; }
 .artisan-summary-card .artisan-meta { margin-bottom: 16px; color: var(--text-secondary); font-size: var(--fs-sm); }
+
+/* =========================================================
+   Password visibility toggle
+   ========================================================= */
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 44px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 18px;
+  padding: 8px;
+  cursor: pointer;
+  line-height: 1;
+  min-height: unset;
+}
